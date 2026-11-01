@@ -861,8 +861,8 @@
                 </div>
                 <div id="comment-quote-preview" class="hidden comment-quote"></div>
                 <label for="comment-author" class="block text-[11px] font-bold text-bible-dark mb-1">Seu nome ou apelido <span aria-hidden="true">*</span></label>
-                <input id="comment-author" class="comment-input mb-2" type="text" maxlength="30" autocomplete="nickname" placeholder="Como você quer aparecer nos comentários?" required style="width:100%;min-height:40px;resize:none;" />
-                <textarea id="comment-draft" class="comment-input" placeholder="Escreva seu comentário..."></textarea>
+                <input id="comment-author" class="comment-input mb-2" type="text" maxlength="30" autocomplete="off" autocorrect="off" autocapitalize="words" data-form-type="other" data-lpignore="true" placeholder="Como você quer aparecer nos comentários?" required style="width:100%;min-height:40px;resize:none;" />
+                <textarea id="comment-draft" class="comment-input" autocomplete="off" placeholder="Escreva seu comentário..."></textarea>
                 <button type="button" onclick="addParagraphComment()" class="w-full mt-2 rounded-xl bg-bible-darkCard text-bible-gold px-3 py-2.5 text-xs font-bold hover:bg-black transition">Adicionar comentário</button>
                 <p id="comments-status" class="comment-status mt-2">Preparando armazenamento local...</p>
                 <div class="border-t border-bible-gold/20 my-4"></div>
@@ -3250,13 +3250,22 @@
         }
 
         // Teclado virtual: o navegador só encolhe a "visual viewport"; sem isto o campo de texto fica escondido atrás do teclado.
-        function syncCommentsViewport() {
+        // No Safari/iOS os eventos de resize/scroll chegam em rajadas durante a animação do teclado; por isso a
+        // atualização é agrupada em um requestAnimationFrame e o offset é zerado na hora quando o campo perde o foco
+        // (senão o pop-up fica "flutuando" com um vão enquanto o teclado fecha).
+        let commentsSyncFrame = 0;
+        function applyCommentsViewport() {
+            commentsSyncFrame = 0;
             const sheet = document.getElementById("reader-comments");
             const vv = window.visualViewport;
             if (!sheet || !vv || !sheet.classList.contains("comments-open")) return;
             const keyboard = Math.max(0, Math.round(window.innerHeight - vv.height - vv.offsetTop));
-            sheet.style.setProperty("--kb-offset", `${keyboard}px`);
+            sheet.style.setProperty("--kb-offset", `${keyboard > 80 ? keyboard : 0}px`); // ignora ruído (barra de endereço etc.)
             sheet.style.setProperty("--vv-max", `${Math.round(vv.height * 0.96)}px`);
+        }
+        function syncCommentsViewport() {
+            if (commentsSyncFrame) return;
+            commentsSyncFrame = requestAnimationFrame(applyCommentsViewport);
         }
         if (window.visualViewport) {
             window.visualViewport.addEventListener("resize", syncCommentsViewport);
@@ -3266,7 +3275,21 @@
             const sheet = document.getElementById("reader-comments");
             if (!isMobileComments() || !sheet || !sheet.classList.contains("comments-open") || !sheet.contains(e.target)) return;
             if (!/^(INPUT|TEXTAREA)$/.test(e.target.tagName)) return;
-            setTimeout(() => e.target.scrollIntoView({ block: "nearest", behavior: "smooth" }), 300);
+            // O iOS rola a página sozinho para mostrar o campo; desfaz isso (o body está travado) e deixa o pop-up se ajustar.
+            setTimeout(() => {
+                syncCommentsViewport();
+                try { e.target.scrollIntoView({ block: "nearest", behavior: "auto" }); } catch (err) {}
+            }, 350);
+        });
+        document.addEventListener("focusout", e => {
+            const sheet = document.getElementById("reader-comments");
+            if (!sheet || !sheet.classList.contains("comments-open") || !sheet.contains(e.target)) return;
+            // Se o foco foi para outro campo do pop-up, o teclado continua aberto: não mexe.
+            setTimeout(() => {
+                if (sheet.contains(document.activeElement) && /^(INPUT|TEXTAREA)$/.test(document.activeElement.tagName)) return;
+                sheet.style.setProperty("--kb-offset", "0px");
+                syncCommentsViewport();
+            }, 0);
         });
 
         // Botão "voltar" do Android / gesto de voltar do iOS fecha o pop-up em vez de sair da leitura.
@@ -3301,7 +3324,7 @@
                 sheet.setAttribute("aria-labelledby", "comments-dialog-title");
                 sheet.scrollTop = 0;
             }
-            syncCommentsViewport();
+            applyCommentsViewport();
             const closeButton = document.getElementById("comments-close-button");
             if (closeButton) closeButton.focus({ preventScroll: true });
         }
