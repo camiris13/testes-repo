@@ -3165,7 +3165,7 @@
 
         async function initializeCommentsStorage() {
             if (!firebaseIsConfigured() || typeof firebase === "undefined") {
-                setCommentsStatus("Firebase indisponível: comentários não podem ser enviados.");
+                setCommentsStatus("Comentários não podem ser enviados.");
                 return;
             }
             try {
@@ -3175,6 +3175,7 @@
                 await firebase.auth().signInAnonymously();
                 commentsAuthReady = true;
                 commentsStorageMode = "firebase";
+                setCommentsStatus("Pronto para comentar");
                 loadChapterComments();
             } catch (error) {
                 commentsAuthReady = false;
