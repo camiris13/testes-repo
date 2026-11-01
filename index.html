@@ -3171,11 +3171,11 @@
             try {
                 if (!firebase.apps.length) firebase.initializeApp(firebaseConfig);
                 commentsDb = firebase.firestore();
-                setCommentsStatus("Conectando ao Firebase...");
+                setCommentsStatus("Conectando...");
                 await firebase.auth().signInAnonymously();
                 commentsAuthReady = true;
                 commentsStorageMode = "firebase";
-                setCommentsStatus("Conectado ao Firebase. Carregando comentários...");
+                setCommentsStatus("Carregando comentários...");
                 loadChapterComments();
             } catch (error) {
                 commentsAuthReady = false;
