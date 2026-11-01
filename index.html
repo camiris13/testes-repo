@@ -3677,7 +3677,7 @@
             
             const textContainer = document.getElementById("read-chapter-text");
             textContainer.style.fontSize = `${readerFontSize}px`;
-            textContainer.innerHTML = chap.content.map(p => p.trim().startsWith("<div") ? p : `<p class="indent-4 leading-relaxed">${p}</p>`).join("");
+            textContainer.innerHTML = chap.content.map(p => p.trim().startsWith("<div") ? p : `<p class="leading-relaxed">${p}</p>`).join("");
             clearCommentTarget();
             setupParagraphCommentSelection();
             loadChapterComments();
