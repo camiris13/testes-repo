@@ -3175,7 +3175,6 @@
                 await firebase.auth().signInAnonymously();
                 commentsAuthReady = true;
                 commentsStorageMode = "firebase";
-                setCommentsStatus("Carregando comentários...");
                 loadChapterComments();
             } catch (error) {
                 commentsAuthReady = false;
